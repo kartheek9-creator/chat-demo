@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Private Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6 font-sans">
+  <div class="w-full max-w-2xl bg-white shadow-md rounded-lg p-4">
+    <h1 class="text-2xl font-bold text-center mb-4">🔐 Private Chat</h1>
+
+    <div class="mb-4 space-y-2">
+      <input id="username" placeholder="Enter your username" class="w-full p-2 border rounded" />
+      <input id="recipient" placeholder="Recipient username" class="w-full p-2 border rounded" />
+    </div>
+
+    <!-- Chat Log -->
+    <div id="chatLog" class="h-96 overflow-y-auto border rounded p-2 bg-gray-50 space-y-2 text-sm">
+    </div>
+
+    <!-- Message input -->
+    <div class="flex mt-4 gap-2">
+      <input type="text" id="messageInput" placeholder="Message" class="flex-1 p-2 border rounded" />
+      <button onclick="sendMessage()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Send
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let socket;
+    let currentUsername = "";
+
+    document.getElementById("username").addEventListener("change", () => {
+      currentUsername = document.getElementById("username").value;
+      if (currentUsername) {
+        socket = new WebSocket(`ws://localhost:8000/ws/${currentUsername}`);
+        socket.onmessage = function (event) {
+          const data = JSON.parse(event.data);
+          const chatLog = document.getElementById("chatLog");
+
+          const msgDiv = document.createElement("div");
+
+          if (data.system) {
+            msgDiv.className = "text-center text-gray-500 italic";
+            msgDiv.textContent = `[System] ${data.system}`;
+          } else if (data.from === currentUsername) {
+            msgDiv.className = "text-right";
+            msgDiv.innerHTML = `<span class="inline-block bg-blue-100 text-blue-900 px-3 py-1 rounded-lg">${data.message}</span>`;
+          } else {
+            msgDiv.className = "text-left";
+            msgDiv.innerHTML = `<span class="inline-block bg-green-100 text-green-900 px-3 py-1 rounded-lg">${data.from}: ${data.message}</span>`;
+          }
+
+          chatLog.appendChild(msgDiv);
+          chatLog.scrollTop = chatLog.scrollHeight;
+        };
+      }
+    });
+
+    function sendMessage() {
+      const messageInput = document.getElementById("messageInput");
+      const recipientInput = document.getElementById("recipient");
+      const chatLog = document.getElementById("chatLog");
+
+      const msg = messageInput.value.trim();
+      const to = recipientInput.value.trim();
+
+      if (socket && to && msg) {
+        // Send message to backend
+        socket.send(JSON.stringify({ to: to, message: msg }));
+
+        // Immediately show the sent message on the right side
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "text-right";
+        msgDiv.innerHTML = `
+      <span class="inline-block bg-blue-500 text-white px-3 py-1 rounded-lg">
+        ${msg}
+      </span>
+    `;
+        chatLog.appendChild(msgDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+
+        // Clear the input
+        messageInput.value = "";
+      }
+    }
+
+  </script>
+</body>
+
+</html>

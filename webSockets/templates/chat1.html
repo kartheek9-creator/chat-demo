@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Private Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-100 to-white min-h-screen flex items-center justify-center font-sans">
+  <div class="w-full max-w-3xl bg-white shadow-xl rounded-2xl p-6 space-y-4">
+    <h1 class="text-3xl font-bold text-indigo-600 text-center mb-2">🔒 Private Chat</h1>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label for="username" class="text-sm text-gray-600">Username</label>
+        <input id="username" class="w-full mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Enter your username" />
+      </div>
+      <div>
+        <label for="recipient" class="text-sm text-gray-600">Recipient</label>
+        <input id="recipient" class="w-full mt-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Enter recipient username" />
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label for="chatLog" class="text-sm text-gray-600">Chat Log</label>
+      <textarea id="chatLog" rows="15" class="w-full mt-1 p-3 border border-gray-300 rounded-lg bg-gray-50 text-sm resize-none" readonly></textarea>
+    </div>
+
+    <div class="flex gap-3 mt-4">
+      <input type="text" id="messageInput" placeholder="Type your message..." class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      <button onclick="sendMessage()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition duration-150 ease-in-out">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let socket;
+
+    document.getElementById("username").addEventListener("change", () => {
+      const username = document.getElementById("username").value;
+      if (username) {
+        socket = new WebSocket(`ws://localhost:8000/ws/${username}`);
+        socket.onmessage = function(event) {
+          const log = document.getElementById("chatLog");
+          const data = JSON.parse(event.data);
+          if (data.system) {
+            log.value += `[System] ${data.system}\n`;
+          } else {
+            log.value += `[${data.from}] ${data.message}\n`;
+          }
+          log.scrollTop = log.scrollHeight;
+        };
+      }
+    });
+
+    function sendMessage() {
+      const messageInput = document.getElementById("messageInput");
+      const recipientInput = document.getElementById("recipient");
+      const msg = messageInput.value;
+      const to = recipientInput.value;
+      if (socket && to && msg) {
+        socket.send(JSON.stringify({ to: to, message: msg }));
+        messageInput.value = "";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Private Chat</title>
+</head>
+<body>
+  <h1>Private Chat</h1>
+  <p>Username: <input id="username" /></p>
+  <p>Recipient: <input id="recipient" /></p>
+  <textarea id="chatLog" rows="20" cols="100" readonly></textarea><br />
+  <input type="text" id="messageInput" placeholder="Message" />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    let socket;
+
+    document.getElementById("username").addEventListener("change", () => {
+      const username = document.getElementById("username").value;
+      if (username) {
+        socket = new WebSocket(`ws://localhost:8000/ws/${username}`);
+        socket.onmessage = function(event) {
+          const log = document.getElementById("chatLog");
+          const data = JSON.parse(event.data);
+          if (data.system) {
+            log.value += `[System] ${data.system}\n`;
+          } else {
+            log.value += `[${data.from}] ${data.message}\n`;
+          }
+        };
+      }
+    });
+
+    function sendMessage() {
+      const messageInput = document.getElementById("messageInput");
+      const recipientInput = document.getElementById("recipient");
+      const msg = messageInput.value;
+      const to = recipientInput.value;
+      if (socket && to && msg) {
+        socket.send(JSON.stringify({ to: to, message: msg }));
+        messageInput.value = "";
+      }
+    }
+  </script>
+</body>
+</html> 
